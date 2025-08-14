@@ -1,45 +1,144 @@
 <!DOCTYPE html>
 <html lang="vi">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Thông tin thiết bị văn phòng</title>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý Thiết bị Văn phòng</title>
     <style>
-      body {
-        font-family: Arial, sans-serif;
-        margin: 20px;
-        line-height: 1.6;
-      }
-      h1 {
-        color: #2c3e50;
-        text-align: center;
-      }
-      .device-info {
-        background: #f9f9f9;
-        border: 1px solid #ddd;
-        border-radius: 5px;
-        padding: 15px;
-        max-width: 500px;
-        margin: 0 auto;
-      }
-      .info-label {
-        font-weight: bold;
-        color: #3498db;
-      }
+        /* Thêm CSS cho giao diện quản lý */
+        .device-list {
+            margin-top: 20px;
+            border-collapse: collapse;
+            width: 100%;
+        }
+        .device-list th, .device-list td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        .scan-section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f0f0f0;
+            border-radius: 5px;
+        }
     </style>
-  </head>
-  <body>
-    <h1>Thông tin thiết bị</h1>
-    <div class="device-info">
-      <p>
-        <span class="info-label">Tên thiết bị:</span> Máy in HP LaserJet Pro
-        M404
-      </p>
-      <p><span class="info-label">Serial:</span> ABC123456</p>
-      <p><span class="info-label">Ngày nhập:</span> 15/10/2023</p>
-      <p><span class="info-label">Bảo hành:</span> 12 tháng</p>
-      <p><span class="info-label">Vị trí:</span> Phòng IT, tầng 3</p>
-      <p><span class="info-label">Liên hệ:</span> it.support@company.com</p>
+</head>
+<body>
+    <h1>Quản lý Thiết bị</h1>
+    
+    <div class="scan-section">
+        <h2>Quét QR Code</h2>
+        <button id="scan-btn">Bắt đầu Quét</button>
+        <div id="scanner-container" style="display:none;">
+            <video id="scanner" width="300" height="200"></video>
+        </div>
     </div>
-  </body>
+
+    <h2>Danh sách Thiết bị</h2>
+    <table class="device-list">
+        <thead>
+            <tr>
+                <th>Tên thiết bị</th>
+                <th>Serial</th>
+                <th>Ngày nhập</th>
+                <th>Vị trí</th>
+                <th>Hành động</th>
+            </tr>
+        </thead>
+        <tbody id="device-table-body">
+            <!-- Danh sách sẽ được thêm tự động bằng JavaScript -->
+        </tbody>
+    </table>
+
+    <script>
+        // Xử lý quét QR code
+        document.getElementById('scan-btn').addEventListener('click', function() {
+            const scannerContainer = document.getElementById('scanner-container');
+            scannerContainer.style.display = 'block';
+            
+            const video = document.getElementById('scanner');
+            let scanner = new Instascan.Scanner({ video: video });
+            
+            scanner.addListener('scan', function(content) {
+                // Xử lý khi quét thành công
+                const deviceData = parseQRContent(content);
+                addDeviceToList(deviceData);
+                scannerContainer.style.display = 'none';
+            });
+            
+            Instascan.Camera.getCameras().then(function(cameras) {
+                if (cameras.length > 0) {
+                    scanner.start(cameras[0]);
+                } else {
+                    alert('Không tìm thấy camera!');
+                }
+            });
+        });
+
+        // Phân tích nội dung QR
+        function parseQRContent(content) {
+            // Giả sử QR chứa dữ liệu JSON
+            try {
+                return JSON.parse(content);
+            } catch {
+                // Nếu không phải JSON, xử lý dạng text
+                const lines = content.split('\n');
+                return {
+                    name: lines[0].split(':')[1].trim(),
+                    serial: lines[1].split(':')[1].trim(),
+                    date: lines[2].split(':')[1].trim(),
+                    location: lines[4].split(':')[1].trim()
+                };
+            }
+        }
+
+        // Thêm thiết bị vào danh sách
+        function addDeviceToList(device) {
+            const tableBody = document.getElementById('device-table-body');
+            const row = document.createElement('tr');
+            
+            row.innerHTML = `
+                <td>${device.name}</td>
+                <td>${device.serial}</td>
+                <td>${device.date}</td>
+                <td>${device.location}</td>
+                <td><button class="delete-btn">Xóa</button></td>
+            `;
+            
+            tableBody.appendChild(row);
+            
+            // Lưu vào localStorage
+            saveDevices();
+        }
+
+        // Lưu danh sách thiết bị
+        function saveDevices() {
+            const devices = [];
+            document.querySelectorAll('#device-table-body tr').forEach(row => {
+                devices.push({
+                    name: row.cells[0].textContent,
+                    serial: row.cells[1].textContent,
+                    date: row.cells[2].textContent,
+                    location: row.cells[3].textContent
+                });
+            });
+            
+            localStorage.setItem('officeDevices', JSON.stringify(devices));
+        }
+
+        // Tải danh sách đã lưu khi khởi động
+        window.addEventListener('load', function() {
+            const savedDevices = localStorage.getItem('officeDevices');
+            if (savedDevices) {
+                JSON.parse(savedDevices).forEach(device => {
+                    addDeviceToList(device);
+                });
+            }
+        });
+    </script>
+    
+    <!-- Thư viện quét QR code -->
+    <script src="https://rawgit.com/schmich/instascan-builds/master/instascan.min.js"></script>
+</body>
 </html>
